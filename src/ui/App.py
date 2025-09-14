@@ -1,10 +1,23 @@
-from lib.image_to_braille import image_to_braille
-from tkinter import Tk, filedialog, Label, Button, PanedWindow, Frame, BooleanVar, Checkbutton
+from utils.braille_utils import array_to_ascii, array_to_braille
+from utils.image_to_braille import image_to_braille
+from tkinter import StringVar, Tk, filedialog, Label, Button, PanedWindow, Frame, BooleanVar, Checkbutton
+from tkinter.ttk import Combobox
 from PIL import ImageTk, Image
 
 from ui.components import TextArea, NumberEntry
 
 DEFAULT_AUTO_UPDATE_IMAGE = True
+
+ascii_transformers = {
+    "array_to_ascii": {
+        "function": array_to_ascii,
+        "char_pixel_dimentions": (3, 2)
+    },
+    "array_to_braille": {
+        "function": array_to_braille,
+        "char_pixel_dimentions": (4, 2)
+    }
+}
 
 class App(Tk):
 
@@ -45,6 +58,7 @@ class App(Tk):
         self._create_threshold(self.left_frame)
         self._create_invert_color(self.left_frame)
         self._create_auto_update(self.left_frame)
+        self._create_option_ascii_transformer(self.left_frame)
 
         self.button = Button(self.left_frame, text="Select Image", command=lambda: self._select_image())
         self.button.pack(anchor="w")
@@ -109,6 +123,17 @@ class App(Tk):
             command=lambda: self._on_checkbox_click_toggle_auto_update()
         )
         self.auto_update_checkbox.pack(anchor="w")
+    
+    def _create_option_ascii_transformer(self, master):
+        self.ascii_transformer_var = StringVar(master)
+        self.ascii_transformer_var.set("array_to_braille")
+        self.ascii_transformer_checkbox = Combobox(
+            master,
+            textvariable=self.ascii_transformer_var,
+            values = list(ascii_transformers.keys()),
+        )
+        self.ascii_transformer_checkbox.bind("<<ComboboxSelected>>", lambda _: self._display_ascii_image()) 
+        self.ascii_transformer_checkbox.pack(anchor="w")
 
     def _on_checkbox_click_toggle_auto_update(self):
         if self.auto_update_var.get():
@@ -184,7 +209,9 @@ class App(Tk):
     def _convert_image(self, image: Image.Image):
         return image_to_braille(
             image=image,
+            pixel_transformer=ascii_transformers[self.ascii_transformer_var.get()]["function"],
             scale_factor=self.shrink_factor.get(),
             threshold=self.threshold.get(),
-            invert_color=self.invert_color_var.get()
+            invert_color=self.invert_color_var.get(),
+            char_pixel_dimentions=ascii_transformers[self.ascii_transformer_var.get()]["char_pixel_dimentions"]
         )
